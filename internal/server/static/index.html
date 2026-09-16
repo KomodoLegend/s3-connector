@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S3 Connector</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <header class="sidebar-head">
+        <div>
+          <h1>S3 Connector</h1>
+          <p class="muted">Соединения и бакеты</p>
+        </div>
+        <button type="button" class="btn primary" id="btn-new" title="Новое соединение">+</button>
+      </header>
+      <div class="toolbar">
+        <button type="button" class="btn" id="btn-export-all">Экспорт…</button>
+        <button type="button" class="btn" id="btn-import">Импорт…</button>
+        <input type="file" id="import-file" accept="application/json,.json" hidden />
+      </div>
+      <input id="conn-search" class="search" type="search" placeholder="Поиск соединений…" spellcheck="false" />
+      <ul id="conn-list" class="conn-list"></ul>
+      <p class="hint">ПКМ по соединению — меню действий</p>
+    </aside>
+
+    <main class="main">
+      <section id="empty-state" class="panel empty">
+        <h2>Нет выбранного соединения</h2>
+        <p>Создайте новое или выберите слева. Правый клик открывает просмотр данных эндпоинта.</p>
+      </section>
+
+      <section id="editor" class="panel hidden">
+        <div class="panel-head">
+          <h2 id="editor-title">Соединение</h2>
+          <div class="row gap" id="view-actions">
+            <button type="button" class="btn" id="btn-export-one">Экспорт</button>
+            <button type="button" class="btn primary" id="btn-edit">Редактировать</button>
+          </div>
+          <div class="row gap hidden" id="edit-actions">
+            <button type="button" class="btn" id="btn-test">Проверить</button>
+            <button type="button" class="btn" id="btn-cancel-edit">Отмена</button>
+            <button type="button" class="btn primary" id="btn-save">Сохранить</button>
+          </div>
+        </div>
+        <form id="conn-form" class="form hidden">
+          <input type="hidden" id="f-id" />
+          <label>Имя
+            <input id="f-name" required placeholder="Prod MinIO" />
+          </label>
+          <label>Endpoint
+            <input id="f-endpoint" required placeholder="https://s3.example.com или s3.example.com:9000" />
+          </label>
+          <div class="grid-2">
+            <label>Region
+              <input id="f-region" placeholder="us-east-1" value="us-east-1" />
+            </label>
+            <label class="checks">
+              <span>Опции</span>
+              <label class="check"><input type="checkbox" id="f-ssl" checked /> Use SSL</label>
+              <label class="check"><input type="checkbox" id="f-path" checked /> Path-style</label>
+            </label>
+          </div>
+          <div class="grid-2">
+            <label>Access Key
+              <input id="f-access" autocomplete="off" />
+            </label>
+            <label>Secret Key
+              <div class="secret-wrap">
+                <input id="f-secret" type="password" autocomplete="off" />
+                <button type="button" class="btn-eye" id="btn-toggle-secret" title="Показать / скрыть" aria-label="Показать пароль">
+                  <svg id="eye-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+            </label>
+          </div>
+          <label>Заметки
+            <textarea id="f-notes" rows="2" placeholder="Опционально"></textarea>
+          </label>
+        </form>
+
+        <div id="buckets-panel" class="buckets-block">
+          <div class="panel-head compact">
+            <h3>Бакеты</h3>
+            <div class="row gap">
+              <button type="button" class="btn" id="btn-refresh-buckets" title="Обновить список с S3">Обновить</button>
+              <button type="button" class="btn" id="btn-add-bucket">+ создать</button>
+            </div>
+          </div>
+          <input id="bucket-search" class="search" type="search" placeholder="Поиск бакетов…" spellcheck="false" />
+          <div id="buckets" class="buckets"></div>
+        </div>
+        <p id="form-status" class="status" aria-live="polite"></p>
+      </section>
+    </main>
+  </div>
+
+  <div id="ctx" class="ctx hidden" role="menu">
+    <button type="button" data-act="view">Смотреть все данные</button>
+    <button type="button" data-act="browse">Браузер объектов</button>
+    <button type="button" data-act="edit">Редактировать</button>
+    <hr />
+    <button type="button" data-act="test">Проверить соединение</button>
+    <button type="button" data-act="export">Экспорт этого соединения</button>
+    <hr />
+    <button type="button" data-act="delete" class="danger">Удалить</button>
+  </div>
+
+  <dialog id="export-dlg">
+    <form method="dialog" id="export-form" class="dlg">
+      <h3>Экспорт в JSON</h3>
+      <fieldset>
+        <legend>Что экспортировать</legend>
+        <label class="check"><input type="radio" name="scope" value="all" checked /> Все соединения</label>
+        <label class="check"><input type="radio" name="scope" value="one" /> Одно соединение</label>
+        <select id="export-one-id" disabled></select>
+      </fieldset>
+      <label class="check"><input type="checkbox" id="export-secrets" checked /> Включить access/secret keys</label>
+      <div class="row gap end">
+        <button type="submit" value="cancel" class="btn">Отмена</button>
+        <button type="submit" value="ok" class="btn primary">Скачать JSON</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="import-dlg">
+    <form method="dialog" class="dlg">
+      <h3>Импорт JSON</h3>
+      <p class="muted">Файл: <span id="import-name">—</span></p>
+      <label class="check"><input type="checkbox" id="import-replace" /> Заменить все существующие</label>
+      <div class="row gap end">
+        <button type="submit" value="cancel" class="btn">Отмена</button>
+        <button type="submit" value="ok" class="btn primary">Импортировать</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="data-dlg" class="wide">
+    <div class="dlg">
+      <div class="panel-head">
+        <h3 id="data-title">Данные</h3>
+        <button type="button" class="btn" id="data-close">Закрыть</button>
+      </div>
+      <div id="view-ui" class="hidden">
+        <div class="auth-copy-bar">
+          <span class="muted">Для чата (Mattermost и др.)</span>
+          <button type="button" class="btn" id="btn-copy-auth" title="Скопировать блок авторизации">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Копировать
+          </button>
+        </div>
+        <pre id="auth-copy-preview" class="auth-copy-preview"></pre>
+        <p id="auth-copy-status" class="status"></p>
+        <dl id="data-fields" class="data-fields"></dl>
+      </div>
+      <div id="browse-ui" class="browse hidden">
+        <div class="row gap wrap">
+          <select id="browse-bucket"></select>
+          <input id="browse-prefix" placeholder="prefix/" />
+          <button type="button" class="btn" id="browse-up" title="На уровень выше">↑</button>
+          <button type="button" class="btn primary" id="browse-load">Обновить</button>
+          <button type="button" class="btn" id="browse-upload">Загрузить файл…</button>
+          <input type="file" id="browse-file" hidden />
+        </div>
+        <p id="browse-meta" class="muted"></p>
+        <p id="browse-status" class="status"></p>
+        <table class="table">
+          <thead><tr><th>Имя</th><th>Размер</th><th>Дата</th><th></th></tr></thead>
+          <tbody id="browse-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="del-bucket-dlg">
+    <div class="dlg">
+      <h3>Удалить бакет на S3</h3>
+      <p class="muted">Бакет и всё содержимое будут удалены на сервере. Для подтверждения введите имя:</p>
+      <p><strong id="del-bucket-name"></strong></p>
+      <label>Имя бакета
+        <input id="del-bucket-confirm" autocomplete="off" placeholder="введите имя точно" />
+      </label>
+      <p id="del-bucket-status" class="status"></p>
+      <div class="row gap end">
+        <button type="button" class="btn" id="del-bucket-cancel">Отмена</button>
+        <button type="button" class="btn danger" id="del-bucket-ok" disabled>Удалить</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="create-bucket-dlg">
+    <div class="dlg">
+      <h3>Создать бакет</h3>
+      <p class="muted" id="create-bucket-msg"></p>
+      <label>Имя бакета
+        <input id="create-bucket-input" autocomplete="off" placeholder="my-bucket" />
+      </label>
+      <p>Бакет: <strong id="create-bucket-name"></strong></p>
+      <p id="create-bucket-status" class="status"></p>
+      <div class="row gap end">
+        <button type="button" class="btn" id="create-bucket-cancel">Отмена</button>
+        <button type="button" class="btn primary" id="create-bucket-ok">Создать</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

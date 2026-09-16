@@ -1,0 +1,14 @@
+# Binaries
+/s3-connector
+/bin/
+*.exe
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local config / secrets (app stores under ~/.config by default)
+*.local.json
+.env
