@@ -698,25 +698,17 @@
     return `${v.toFixed(i ? 1 : 0)} ${u[i]}`;
   }
 
-  async function downloadExport({ connectionIds, includeSecrets }) {
-    const res = await fetch("/api/export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ connectionIds, includeSecrets }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || res.statusText);
-    }
-    const blob = await res.blob();
-    const cd = res.headers.get("Content-Disposition") || "";
-    const m = /filename="([^"]+)"/.exec(cd);
-    const name = m ? m[1] : "s3-connections.json";
+  function downloadExport({ connectionIds, includeSecrets }) {
+    const q = new URLSearchParams();
+    if (includeSecrets) q.set("secrets", "1");
+    if (connectionIds?.length) q.set("ids", connectionIds.join(","));
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
+    a.href = `/api/export?${q}`;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(a.href);
+    a.remove();
   }
 
   function syncExportScope() {
@@ -820,15 +812,11 @@
     setStatus(ok ? "Соединение OK" : "Нет соединения", ok ? "ok" : "err");
   };
 
-  $("#btn-export-one").onclick = async () => {
+  $("#btn-export-one").onclick = () => {
     const id = $("#f-id").value;
     if (!id) return;
-    try {
-      await downloadExport({ connectionIds: [id], includeSecrets: true });
-      setStatus("Экспортировано", "ok");
-    } catch (err) {
-      setStatus(err.message, "err");
-    }
+    downloadExport({ connectionIds: [id], includeSecrets: true });
+    setStatus("Экспортировано", "ok");
   };
 
   $("#btn-export-all").onclick = () => {
@@ -845,18 +833,15 @@
     r.addEventListener("change", syncExportScope);
   });
 
-  $("#export-form").addEventListener("close", async () => {
-    if (exportDlg.returnValue !== "ok") return;
-    const scope = $('#export-form input[name="scope"]:checked').value;
+  $("#export-cancel").onclick = () => exportDlg.close();
+  $("#export-ok").onclick = () => {
+    const scope = $('#export-form input[name="scope"]:checked')?.value || "all";
     const includeSecrets = $("#export-secrets").checked;
     const connectionIds = scope === "one" ? [$("#export-one-id").value].filter(Boolean) : [];
-    try {
-      await downloadExport({ connectionIds, includeSecrets });
-      setStatus("JSON скачан", "ok");
-    } catch (err) {
-      setStatus(err.message, "err");
-    }
-  });
+    downloadExport({ connectionIds, includeSecrets });
+    exportDlg.close();
+    setStatus("JSON скачан", "ok");
+  };
 
   $("#btn-import").onclick = () => $("#import-file").click();
   $("#import-file").onchange = async (e) => {
@@ -908,11 +893,7 @@
       return;
     }
     if (act === "export") {
-      try {
-        await downloadExport({ connectionIds: [id], includeSecrets: true });
-      } catch (err) {
-        alert(err.message);
-      }
+      downloadExport({ connectionIds: [id], includeSecrets: true });
       return;
     }
     if (act === "delete") {

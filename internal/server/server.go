@@ -45,11 +45,15 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/connections/{id}/download", s.handleDownload)
 	s.mux.HandleFunc("POST /api/connections/{id}/upload", s.handleUpload)
 
+	s.mux.HandleFunc("GET /api/export", s.handleExport)
 	s.mux.HandleFunc("POST /api/export", s.handleExport)
 	s.mux.HandleFunc("POST /api/import", s.handleImport)
 
 	root := staticFS()
-	s.mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(root))))
+	s.mux.Handle("GET /static/", http.StripPrefix("/static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		http.FileServer(http.FS(root)).ServeHTTP(w, r)
+	})))
 	s.mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		data, err := fs.ReadFile(root, "index.html")
 		if err != nil {
@@ -57,6 +61,7 @@ func (s *Server) routes() {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store")
 		_, _ = w.Write(data)
 	})
 }
@@ -353,7 +358,20 @@ type exportRequest struct {
 
 func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 	var req exportRequest
-	_ = json.NewDecoder(r.Body).Decode(&req)
+	if r.Method == http.MethodGet {
+		if ids := strings.TrimSpace(r.URL.Query().Get("ids")); ids != "" {
+			for _, id := range strings.Split(ids, ",") {
+				id = strings.TrimSpace(id)
+				if id != "" {
+					req.ConnectionIDs = append(req.ConnectionIDs, id)
+				}
+			}
+		}
+		sec := r.URL.Query().Get("secrets")
+		req.IncludeSecrets = sec == "1" || sec == "true" || sec == "yes"
+	} else {
+		_ = json.NewDecoder(r.Body).Decode(&req)
+	}
 	doc, err := s.store.Export(config.ExportOptions{
 		ConnectionIDs:  req.ConnectionIDs,
 		IncludeSecrets: req.IncludeSecrets,
@@ -376,8 +394,9 @@ func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
+	w.Header().Set("Cache-Control", "no-store")
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(doc)

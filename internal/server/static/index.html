@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>S3 Connector</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v=2" />
 </head>
 <body>
   <div id="app">
@@ -112,7 +112,7 @@
   </div>
 
   <dialog id="export-dlg">
-    <form method="dialog" id="export-form" class="dlg">
+    <form id="export-form" class="dlg" onsubmit="return false;">
       <h3>Экспорт в JSON</h3>
       <fieldset>
         <legend>Что экспортировать</legend>
@@ -122,8 +122,8 @@
       </fieldset>
       <label class="check"><input type="checkbox" id="export-secrets" checked /> Включить access/secret keys</label>
       <div class="row gap end">
-        <button type="submit" value="cancel" class="btn">Отмена</button>
-        <button type="submit" value="ok" class="btn primary">Скачать JSON</button>
+        <button type="button" class="btn" id="export-cancel">Отмена</button>
+        <button type="button" class="btn primary" id="export-ok">Скачать JSON</button>
       </div>
     </form>
   </dialog>
@@ -212,6 +212,6 @@
     </div>
   </dialog>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=2"></script>
 </body>
 </html>
