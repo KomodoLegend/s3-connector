@@ -47,6 +47,36 @@ body {
   gap: 0.5rem;
 }
 .sidebar-head h1 { margin: 0; font-size: 1.25rem; letter-spacing: -0.02em; }
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+.lang-switch {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0c1117;
+}
+.lang-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.45rem;
+  cursor: pointer;
+}
+.lang-btn + .lang-btn { border-left: 1px solid var(--border); }
+.lang-btn.active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
 .muted { color: var(--muted); margin: 0.25rem 0 0; font-size: 0.85rem; }
 .hint { color: var(--muted); font-size: 0.75rem; margin: auto 0 0; }
 

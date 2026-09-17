@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=S3 Connector
+GenericName=S3 connection manager
+Comment=Manage S3-compatible connections, buckets and objects
+Exec=s3-connector
+Icon=s3-connector
+Terminal=false
+Categories=Network;Utility;Development;
+Keywords=S3;MinIO;Ceph;object storage;
+StartupNotify=false
+StartupWMClass=s3-connector

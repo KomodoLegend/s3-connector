@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="S3 Connector">
+  <defs>
+    <linearGradient id="g" x1="16" y1="12" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1f6feb"/>
+      <stop offset="1" stop-color="#0b3d91"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#g)"/>
+  <path fill="#ffffff" fill-opacity="0.95" d="M34 78c0-14 12-22 30-22h2c4-10 14-16 26-16 16 0 28 11 28 28v2c10 1 18 9 18 19 0 11-9 20-21 20H42c-14 0-24-10-24-23 0-10 7-18 16-20zm30-14c-12 0-20 5-20 14 0 7 6 12 16 12h42c6 0 11-5 11-11s-5-11-12-11h-5l-1-5c0-10-8-17-18-17-8 0-14 4-17 10l-2 4h-4c-7 0-12 3-12 8 0 0 0 0 0 0z"/>
+  <path fill="#9ecbff" d="M40 94h48c2 0 4 2 4 4s-2 4-4 4H40c-2 0-4-2-4-4s2-4 4-4z"/>
+</svg>

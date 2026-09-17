@@ -1,40 +1,59 @@
 # S3 Connector
 
-Локальный менеджер S3-соединений на Go: несколько эндпоинтов, бакеты, админка настроек, экспорт/импорт JSON и просмотр данных по ПКМ.
+Local desktop app for managing S3-compatible connections (AWS, MinIO, Ceph, …): endpoints, buckets, object browser, JSON export/import.
 
-## Возможности
+On Linux it runs as a **standalone window** (Chrome/Chromium app mode or Epiphany) and can be installed into the Apps menu.
 
-- Много независимых S3-совместимых соединений (AWS, MinIO, Ceph и т.д.)
-- Редактирование настроек: endpoint, region, keys, SSL, path-style, список бакетов
-- **ПКМ** по соединению → контекстное меню:
-  - смотреть все данные эндпоинта (бакеты + сэмпл объектов)
-  - браузер объектов
-  - проверить / экспортировать / удалить
-- Экспорт JSON: **все** соединения или **одно**
-- Импорт JSON (merge или полная замена)
+## Features
 
-## Запуск
+- Multiple independent S3 connections
+- Edit settings: endpoint, region, keys, SSL, path-style
+- Live bucket list from S3 when a connection is opened
+- Right-click menu: view data, object browser, test, export, delete
+- JSON export/import (merge or replace)
+- UI language: RU / EN
+
+## Install (Fedora / GNOME)
 
 ```bash
-go run .
+./scripts/install.sh
 ```
 
-Откроется UI на [http://127.0.0.1:8787](http://127.0.0.1:8787).
+Then open **Activities → S3 Connector**.
 
-Флаги:
+This installs:
 
-| Флаг | По умолчанию | Описание |
-|------|--------------|----------|
-| `-addr` | `127.0.0.1:8787` | адрес HTTP |
-| `-store` | `~/.config/s3-connector/connections.json` | файл настроек |
-| `-no-open` | `false` | не открывать браузер |
+| Path | What |
+|------|------|
+| `~/.local/bin/s3-connector` | binary |
+| `~/.local/share/applications/s3-connector.desktop` | Apps menu entry |
+| `~/.local/share/icons/hicolor/scalable/apps/s3-connector.svg` | icon |
+
+Uninstall:
+
+```bash
+./scripts/uninstall.sh
+```
+
+## Run without installing
 
 ```bash
 go build -o s3-connector .
-./s3-connector -addr 127.0.0.1:9000
+./s3-connector
 ```
 
-## Формат JSON
+Closing the app window stops the background local server.
+
+Flags:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-addr` | `127.0.0.1:8787` | HTTP listen address (falls back to a free port if busy) |
+| `-store` | `~/.config/s3-connector/connections.json` | settings file |
+| `-no-open` | `false` | server only, no window |
+| `-browser` | `false` | open default browser tab instead of app window |
+
+## JSON format
 
 ```json
 {
@@ -58,4 +77,4 @@ go build -o s3-connector .
 }
 ```
 
-Хранилище создаётся автоматически при первом запуске с правами `0600`.
+The store file is created automatically on first run with mode `0600`.

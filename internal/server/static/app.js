@@ -2,6 +2,10 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
+  const t = (...args) => window.I18n.t(...args);
+  const dash = () => t("dash");
+
+
   let connections = [];
   let selectedId = null;
   let ctxId = null;
@@ -28,10 +32,10 @@
   }
 
   function statusTitle(st) {
-    if (st === "ok") return "Соединение OK";
-    if (st === "err") return "Нет соединения";
-    if (st === "pending") return "Проверка…";
-    return "Статус неизвестен";
+    if (st === "ok") return t("status.ok");
+    if (st === "err") return t("status.err");
+    if (st === "pending") return t("status.pending");
+    return t("status.unknown");
   }
 
   const listEl = $("#conn-list");
@@ -86,11 +90,11 @@
     const q = $("#conn-search")?.value || "";
     const filtered = connections.filter((c) => matchesSearch(connectionSearchText(c), q));
     if (!connections.length) {
-      listEl.innerHTML = `<li class="muted" style="padding:0.5rem">Пока пусто — нажмите +</li>`;
+      listEl.innerHTML = `<li class="muted" style="padding:0.5rem">${escapeHtml(t("list.empty"))}</li>`;
       return;
     }
     if (!filtered.length) {
-      listEl.innerHTML = `<li class="muted" style="padding:0.5rem">Ничего не найдено</li>`;
+      listEl.innerHTML = `<li class="muted" style="padding:0.5rem">${escapeHtml(t("list.none"))}</li>`;
       return;
     }
     for (const c of filtered) {
@@ -101,7 +105,7 @@
       const dotClass = st ? `status-dot ${st}` : "status-dot";
       li.innerHTML = `
         <span class="${dotClass}" title="${escapeHtml(statusTitle(st))}"></span>
-        <div class="name">${escapeHtml(c.name || "без имени")}</div>
+        <div class="name">${escapeHtml(c.name || t("list.unnamed"))}</div>
         <div class="ep">${escapeHtml(c.endpoint || "")}</div>
         <div class="meta">${escapeHtml(c.region || "")}</div>`;
       li.addEventListener("click", () => select(c.id));
@@ -151,7 +155,7 @@
     }
     empty.classList.add("hidden");
     editor.classList.remove("hidden");
-    $("#editor-title").textContent = c.name || "Соединение";
+    $("#editor-title").textContent = c.name || t("editor.connection");
     fillForm(c);
     setUIMode("view");
     setStatus("");
@@ -169,7 +173,7 @@
     $("#f-secret").value = c.secretAccessKey || "";
     $("#f-secret").type = "password";
     $("#btn-toggle-secret").classList.remove("active");
-    $("#btn-toggle-secret").setAttribute("aria-label", "Показать пароль");
+    $("#btn-toggle-secret").setAttribute("aria-label", t("eye.show"));
     $("#eye-icon").innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
     $("#f-notes").value = c.notes || "";
     if ($("#bucket-search")) $("#bucket-search").value = "";
@@ -197,7 +201,7 @@
       return;
     }
     const root = $("#buckets");
-    root.innerHTML = `<p class="muted">Загрузка бакетов с S3…</p>`;
+    root.innerHTML = `<p class="muted">${escapeHtml(t("buckets.loading"))}</p>`;
     try {
       const list = await api(`/api/connections/${id}/buckets`);
       if (selectedId !== id) return; // switched away
@@ -228,32 +232,32 @@
     const filtered = liveBuckets.filter((b) => matchesSearch(b.name || "", q));
 
     if (!liveBucketsConnId) {
-      root.innerHTML = `<p class="muted">Сохраните соединение, чтобы загрузить бакеты</p>`;
+      root.innerHTML = `<p class="muted">${escapeHtml(t("buckets.saveFirst"))}</p>`;
       return;
     }
     if (!liveBuckets.length) {
-      root.innerHTML = `<p class="muted">На эндпоинте нет бакетов (или нет прав ListBuckets)</p>`;
+      root.innerHTML = `<p class="muted">${escapeHtml(t("buckets.none"))}</p>`;
       return;
     }
     if (!filtered.length) {
-      root.innerHTML = `<p class="muted">Ничего не найдено</p>`;
+      root.innerHTML = `<p class="muted">${escapeHtml(t("buckets.noneShort"))}</p>`;
       return;
     }
 
     const table = document.createElement("table");
     table.className = "table buckets-table";
-    table.innerHTML = `<thead><tr><th>Имя</th><th>Создан</th><th></th></tr></thead>`;
+    table.innerHTML = `<thead><tr><th>${escapeHtml(t("th.name"))}</th><th>${escapeHtml(t("th.created"))}</th><th></th></tr></thead>`;
     const tbody = document.createElement("tbody");
     for (const b of filtered) {
       const tr = document.createElement("tr");
-      const created = b.creationDate ? formatDate(b.creationDate) : "—";
+      const created = b.creationDate ? formatDate(b.creationDate) : dash();
       tr.innerHTML = `
         <td class="bucket-name">${escapeHtml(b.name)}</td>
         <td class="bucket-date">${escapeHtml(created)}</td>
         <td>
           <div class="actions">
-            <button type="button" class="btn btn-sm btn-open" data-name="${escapeHtml(b.name)}">Открыть</button>
-            <button type="button" class="btn btn-sm danger btn-rm" data-name="${escapeHtml(b.name)}">Удалить</button>
+            <button type="button" class="btn btn-sm btn-open" data-name="${escapeHtml(b.name)}">${escapeHtml(t("btn.open"))}</button>
+            <button type="button" class="btn btn-sm danger btn-rm" data-name="${escapeHtml(b.name)}">${escapeHtml(t("btn.delete"))}</button>
           </div>
         </td>`;
       tbody.appendChild(tr);
@@ -278,7 +282,7 @@
   }
 
   async function openBucketEnsured(id, name, prefix) {
-    setStatus("Открытие бакета…");
+    setStatus(t("openingBucket"));
     try {
       await api(`/api/connections/${id}/objects?${new URLSearchParams({ bucket: name, prefix: prefix || "", max: "1" })}`);
       setStatus("");
@@ -292,16 +296,16 @@
 
   function openCreateBucketDialog(id, presetName = "", openAfter = false) {
     if (!id) {
-      setStatus("Сначала сохраните соединение", "err");
+      setStatus(t("saveFirst"), "err");
       return;
     }
     createOpenAfter = openAfter;
     pendingCreate = { id, prefix: "" };
     $("#create-bucket-input").value = presetName || "";
-    $("#create-bucket-name").textContent = presetName || "—";
+    $("#create-bucket-name").textContent = presetName || dash();
     $("#create-bucket-msg").textContent = openAfter
-      ? "Бакет недоступен. Создать на S3 и открыть?"
-      : "Новый бакет будет создан на S3.";
+      ? t("create.msg.open")
+      : t("create.msg.new");
     $("#create-bucket-status").textContent = "";
     $("#create-bucket-status").className = "status";
     $("#create-bucket-dlg").showModal();
@@ -312,7 +316,7 @@
     const id = pendingCreate?.id || $("#f-id").value;
     const name = ($("#create-bucket-input").value || "").trim();
     if (!id || !name) {
-      $("#create-bucket-status").textContent = "Укажите имя бакета";
+      $("#create-bucket-status").textContent = t("create.needName");
       $("#create-bucket-status").className = "status err";
       return;
     }
@@ -321,7 +325,7 @@
     const cancelBtn = $("#create-bucket-cancel");
     okBtn.disabled = true;
     cancelBtn.disabled = true;
-    st.textContent = "Создание…";
+    st.textContent = t("create.creating");
     st.className = "status";
     try {
       await api(`/api/connections/${id}/buckets`, {
@@ -332,7 +336,7 @@
       $("#create-bucket-dlg").close();
       okBtn.disabled = false;
       cancelBtn.disabled = false;
-      setStatus(`Бакет «${name}» создан`, "ok");
+      setStatus(t("create.done", name), "ok");
       if (selectedId === id) await loadLiveBuckets(id);
       if (createOpenAfter) showBrowse(id, name, "");
       createOpenAfter = false;
@@ -341,7 +345,7 @@
       st.className = "status err";
       okBtn.disabled = false;
       cancelBtn.disabled = false;
-      setStatus("Не удалось создать бакет: " + e2.message, "err");
+      setStatus(t("create.fail", e2.message), "err");
     }
   }
 
@@ -431,7 +435,7 @@
   function showEnteredData(id) {
     const c = connections.find((x) => x.id === id);
     if (!c) return;
-    $("#data-title").textContent = c.name || "Данные соединения";
+    $("#data-title").textContent = c.name || t("data.title");
     $("#view-ui").classList.remove("hidden");
     $("#browse-ui").classList.add("hidden");
 
@@ -442,23 +446,23 @@
     $("#btn-copy-auth").onclick = async () => {
       try {
         await copyText(block);
-        $("#auth-copy-status").textContent = "Скопировано — можно вставить в Mattermost";
+        $("#auth-copy-status").textContent = t("auth.copied");
         $("#auth-copy-status").className = "status ok";
       } catch (err) {
-        $("#auth-copy-status").textContent = err.message || "Не удалось скопировать";
+        $("#auth-copy-status").textContent = err.message || t("auth.copyFail");
         $("#auth-copy-status").className = "status err";
       }
     };
 
     const fields = [
-      ["Имя", c.name || "—"],
-      ["Endpoint", c.endpoint || "—"],
-      ["Region", c.region || "—"],
-      ["Access Key", c.accessKeyId || "—"],
-      ["Secret Key", c.secretAccessKey || "—", true],
-      ["Use SSL", c.useSSL ? "да" : "нет"],
-      ["Path-style", c.pathStyle ? "да" : "нет"],
-      ["Заметки", c.notes || "—"],
+      [t("field.name"), c.name || dash()],
+      [t("field.endpoint"), c.endpoint || dash()],
+      [t("field.region"), c.region || dash()],
+      [t("field.accessKey"), c.accessKeyId || dash()],
+      [t("field.secretKey"), c.secretAccessKey || dash(), true],
+      [t("option.useSsl"), c.useSSL ? t("yes") : t("no")],
+      [t("option.pathStyle"), c.pathStyle ? t("yes") : t("no")],
+      [t("field.notes"), c.notes || dash()],
     ];
     const dl = $("#data-fields");
     dl.innerHTML = "";
@@ -477,14 +481,14 @@
   async function showBrowse(id, bucketName = "", prefix = "") {
     browseId = id;
     browseBucketMeta = {};
-    $("#data-title").textContent = bucketName ? `Бакет: ${bucketName}` : "Браузер объектов";
+    $("#data-title").textContent = bucketName ? t("browse.bucket", bucketName) : t("browse.title");
     $("#view-ui").classList.add("hidden");
     $("#browse-ui").classList.remove("hidden");
     dataDlg.showModal();
     const bucketSel = $("#browse-bucket");
     bucketSel.innerHTML = "";
     $("#browse-prefix").value = prefix || "";
-        $("#browse-rows").innerHTML = `<tr><td colspan="4" class="muted">Загрузка…</td></tr>`;
+        $("#browse-rows").innerHTML = `<tr><td colspan="4" class="muted">${escapeHtml(t("browse.loading"))}</td></tr>`;
     try {
       const buckets = await api(`/api/connections/${id}/buckets`);
       for (const b of buckets || []) {
@@ -494,8 +498,8 @@
       if (bucketName) names.add(bucketName);
       const list = [...names].sort((a, b) => a.localeCompare(b));
       if (!list.length) {
-        bucketSel.innerHTML = `<option value="">(нет бакетов)</option>`;
-        $("#browse-rows").innerHTML = `<tr><td colspan="4" class="muted">Нет бакетов</td></tr>`;
+        bucketSel.innerHTML = `<option value="">${escapeHtml(t("browse.noBucketsOpt"))}</option>`;
+        $("#browse-rows").innerHTML = `<tr><td colspan="4" class="muted">${escapeHtml(t("browse.noBuckets"))}</td></tr>`;
         $("#browse-meta").textContent = "";
         return;
       }
@@ -526,11 +530,11 @@
     const bucket = $("#browse-bucket").value;
     const prefix = $("#browse-prefix").value;
     if (!bucket) return;
-    $("#data-title").textContent = `Бакет: ${bucket}`;
+    $("#data-title").textContent = t("browse.bucket", bucket);
     const created = browseBucketMeta[bucket];
     const parts = [];
-    if (created) parts.push(`Создан: ${formatDate(created)}`);
-    parts.push(prefix ? `Путь: ${prefix}` : "Корень бакета");
+    if (created) parts.push(t("browse.createdMeta", formatDate(created)));
+    parts.push(prefix ? t("browse.prefixMeta", prefix) : t("browse.root"));
     $("#browse-meta").textContent = parts.join(" · ");
     setBrowseStatus("");
     try {
@@ -539,19 +543,19 @@
       const tbody = $("#browse-rows");
       tbody.innerHTML = "";
       if (!objs.length) {
-        tbody.innerHTML = `<tr><td colspan="4" class="muted">Пусто</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="muted">${escapeHtml(t("browse.empty"))}</td></tr>`;
         return;
       }
       for (const o of objs) {
         const tr = document.createElement("tr");
         const name = displayKey(o.key, prefix);
-        const size = o.isPrefix ? "—" : formatSize(o.size);
+        const size = o.isPrefix ? dash() : formatSize(o.size);
         const date = o.isPrefix
-          ? "папка"
-          : (o.lastModified ? formatDate(o.lastModified) : "—");
+          ? t("browse.folder")
+          : (o.lastModified ? formatDate(o.lastModified) : dash());
         const actions = o.isPrefix
           ? ""
-          : `<div class="actions"><button type="button" class="btn btn-sm" data-dl="${escapeHtml(o.key)}">Скачать</button></div>`;
+          : `<div class="actions"><button type="button" class="btn btn-sm" data-dl="${escapeHtml(o.key)}">${escapeHtml(t("browse.dl"))}</button></div>`;
         tr.innerHTML = `<td class="${o.isPrefix ? "prefix" : ""}">${escapeHtml(name)}</td><td>${size}</td><td>${escapeHtml(date)}</td><td>${actions}</td>`;
         if (o.isPrefix) {
           tr.querySelector("td").addEventListener("click", () => {
@@ -592,7 +596,7 @@
     const file = input.files?.[0];
     input.value = "";
     if (!file || !bucket) return;
-    setBrowseStatus(`Загрузка ${file.name}…`);
+    setBrowseStatus(t("browse.uploading", file.name));
     const fd = new FormData();
     fd.append("bucket", bucket);
     fd.append("prefix", prefix || "");
@@ -601,7 +605,7 @@
       const res = await fetch(`/api/connections/${id}/upload`, { method: "POST", body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || res.statusText);
-      setBrowseStatus(`Загружено: ${data.key}`, "ok");
+      setBrowseStatus(t("browse.uploaded", data.key), "ok");
       await loadObjects(id);
     } catch (e) {
       setBrowseStatus(e.message, "err");
@@ -611,7 +615,7 @@
   function openDeleteBucketDialog(name) {
     const id = $("#f-id").value;
     if (!id) {
-      setStatus("Сначала сохраните соединение", "err");
+      setStatus(t("saveFirst"), "err");
       return;
     }
     pendingDeleteBucket = name;
@@ -639,7 +643,7 @@
     const cancelBtn = $("#del-bucket-cancel");
     okBtn.disabled = true;
     cancelBtn.disabled = true;
-    st.textContent = "Удаление на S3…";
+    st.textContent = t("browse.deleting");
     st.className = "status";
 
     try {
@@ -650,7 +654,7 @@
       pendingDeleteBucket = "";
       $("#del-bucket-dlg").close();
       cancelBtn.disabled = false;
-      setStatus(`Бакет «${name}» удалён с S3`, "ok");
+      setStatus(t("del.done", name), "ok");
       if (selectedId === id) await loadLiveBuckets(id);
     } catch (err) {
       st.textContent = err.message;
@@ -723,18 +727,18 @@
     renderList();
     empty.classList.add("hidden");
     editor.classList.remove("hidden");
-    $("#editor-title").textContent = "Новое соединение";
+    $("#editor-title").textContent = t("newConnection");
     fillForm(blankConnection());
     setUIMode("edit");
     renderBuckets();
-    setStatus("Заполните поля и сохраните");
+    setStatus(t("fillAndSave"));
   };
 
   $("#btn-edit").onclick = () => {
     const id = $("#f-id").value;
     if (!id) return;
     setUIMode("edit");
-    setStatus("Редактирование настроек");
+    setStatus(t("editing"));
   };
 
   $("#btn-cancel-edit").onclick = () => {
@@ -760,7 +764,7 @@
   $("#btn-refresh-buckets").onclick = () => {
     const id = $("#f-id").value;
     if (!id) {
-      setStatus("Сначала сохраните соединение", "err");
+      setStatus(t("saveFirst"), "err");
       return;
     }
     loadLiveBuckets(id);
@@ -776,7 +780,7 @@
     const show = input.type === "password";
     input.type = show ? "text" : "password";
     btn.classList.toggle("active", show);
-    btn.setAttribute("aria-label", show ? "Скрыть пароль" : "Показать пароль");
+    btn.setAttribute("aria-label", show ? t("eye.hide") : t("eye.show"));
     icon.innerHTML = show ? eyeOff : eyeOpen;
   };
 
@@ -784,17 +788,17 @@
     e.preventDefault();
     const body = readForm();
     if (!body.name || !body.endpoint) {
-      setStatus("Имя и endpoint обязательны", "err");
+      setStatus(t("nameEndpointRequired"), "err");
       return;
     }
-    setStatus("Сохранение…");
+    setStatus(t("saving"));
     try {
       const res = await api("/api/connections", { method: "POST", body: JSON.stringify(body) });
       const saved = res.connection || res;
       selectedId = saved.id;
       await reload();
       setUIMode("view");
-      setStatus("Сохранено", "ok");
+      setStatus(t("saved"), "ok");
       probeConnection(saved.id); // refresh status after save
     } catch (err) {
       setStatus(err.message, "err");
@@ -804,19 +808,19 @@
   $("#btn-test").onclick = async () => {
     const id = $("#f-id").value;
     if (!id) {
-      setStatus("Сначала сохраните соединение", "err");
+      setStatus(t("saveFirst"), "err");
       return;
     }
-    setStatus("Проверка…");
+    setStatus(t("testing"));
     const ok = await probeConnection(id);
-    setStatus(ok ? "Соединение OK" : "Нет соединения", ok ? "ok" : "err");
+    setStatus(ok ? t("status.ok") : t("status.err"), ok ? "ok" : "err");
   };
 
   $("#btn-export-one").onclick = () => {
     const id = $("#f-id").value;
     if (!id) return;
     downloadExport({ connectionIds: [id], includeSecrets: true });
-    setStatus("Экспортировано", "ok");
+    setStatus(t("exported"), "ok");
   };
 
   $("#btn-export-all").onclick = () => {
@@ -840,7 +844,7 @@
     const connectionIds = scope === "one" ? [$("#export-one-id").value].filter(Boolean) : [];
     downloadExport({ connectionIds, includeSecrets });
     exportDlg.close();
-    setStatus("JSON скачан", "ok");
+    setStatus(t("jsonDownloaded"), "ok");
   };
 
   $("#btn-import").onclick = () => $("#import-file").click();
@@ -865,7 +869,7 @@
       });
       importPayload = null;
       await reload({ probe: true });
-      setStatus(`Импорт: +${res.added}, обновлено ${res.updated}`, "ok");
+      setStatus(t("import.result", res.added, res.updated), "ok");
     } catch (err) {
       setStatus(err.message, "err");
     }
@@ -880,16 +884,16 @@
     if (act === "edit") {
       await select(id);
       setUIMode("edit");
-      setStatus("Редактирование настроек");
+      setStatus(t("editing"));
       return;
     }
     if (act === "view") return showEnteredData(id);
     if (act === "browse") return showBrowse(id);
     if (act === "test") {
       await select(id);
-      setStatus("Проверка…");
+      setStatus(t("testing"));
       const ok = await probeConnection(id);
-      setStatus(ok ? "Соединение OK" : "Нет соединения", ok ? "ok" : "err");
+      setStatus(ok ? t("status.ok") : t("status.err"), ok ? "ok" : "err");
       return;
     }
     if (act === "export") {
@@ -897,7 +901,7 @@
       return;
     }
     if (act === "delete") {
-      if (!confirm("Удалить соединение?")) return;
+      if (!confirm(t("confirm.deleteConn"))) return;
       await api(`/api/connections/${id}`, { method: "DELETE" });
       if (selectedId === id) selectedId = null;
       await reload();
@@ -934,7 +938,7 @@
   };
   $("#create-bucket-ok").onclick = () => doCreateBucket();
   $("#create-bucket-input").addEventListener("input", () => {
-    $("#create-bucket-name").textContent = ($("#create-bucket-input").value || "").trim() || "—";
+    $("#create-bucket-name").textContent = ($("#create-bucket-input").value || "").trim() || dash();
   });
   $("#create-bucket-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -955,6 +959,34 @@
     $("#del-bucket-dlg").close();
   };
   $("#del-bucket-ok").onclick = () => executeDeleteBucket();
+
+
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => I18n.setLang(btn.dataset.lang));
+  });
+  I18n.applyDom();
+  I18n.onChange(() => {
+    const id = $("#f-id").value;
+    const c = connections.find((x) => x.id === id);
+    if (c && !editor.classList.contains("hidden") && uiMode === "view") {
+      $("#editor-title").textContent = c.name || t("editor.connection");
+    } else if (!id && !editor.classList.contains("hidden") && uiMode === "edit") {
+      $("#editor-title").textContent = t("newConnection");
+    }
+    const eye = $("#btn-toggle-secret");
+    if (eye) {
+      const show = $("#f-secret").type === "text";
+      eye.setAttribute("aria-label", show ? t("eye.hide") : t("eye.show"));
+    }
+    if ($("#create-bucket-dlg")?.open) {
+      $("#create-bucket-msg").textContent = createOpenAfter ? t("create.msg.open") : t("create.msg.new");
+    }
+    renderList();
+    renderBuckets();
+    if (!$("#browse-ui").classList.contains("hidden") && browseId) {
+      loadObjects(browseId);
+    }
+  });
 
   reload({ probe: true }).catch((e) => setStatus(e.message, "err"));
 })();
