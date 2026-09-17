@@ -864,7 +864,7 @@
         headers: { "Content-Type": "application/json" },
       });
       importPayload = null;
-      await reload();
+      await reload({ probe: true });
       setStatus(`Импорт: +${res.added}, обновлено ${res.updated}`, "ok");
     } catch (err) {
       setStatus(err.message, "err");
